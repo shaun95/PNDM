@@ -22,7 +22,7 @@ import torch.utils.data as data
 import torchvision.utils as tvu
 import torch.utils.tensorboard as tb
 from scipy import integrate
-from torchdiffeq import odeint
+# from torchdiffeq import odeint
 from tqdm.auto import tqdm
 
 from dataset import get_dataset, inverse_data_transform
@@ -76,12 +76,12 @@ class Runner(object):
         epoch, step = 0, 0
 
         if self.args.restart:
-            train_state = th.load(os.path.join(self.args.train_path, 'train.pth'), map_location=self.device)
+            train_state = th.load(os.path.join(self.args.train_path, 'train.ckpt'), map_location=self.device)
             model.load_state_dict(train_state[0])
             optim.load_state_dict(train_state[1])
             epoch, step = train_state[2:4]
             if ema is not None:
-                ema_state = th.load(os.path.join(self.args.train_path, 'ema.pth'), map_location=self.device)
+                ema_state = th.load(os.path.join(self.args.train_path, 'ema.ckpt'), map_location=self.device)
                 ema.load_state_dict(ema_state)
 
         for epoch in range(epoch, config['epoch']):
@@ -131,9 +131,9 @@ class Runner(object):
 
                 if step % 10000 == 0:
                     train_state = [model.state_dict(), optim.state_dict(), epoch, step]
-                    th.save(train_state, os.path.join(self.args.train_path, 'train.pth'))
+                    th.save(train_state, os.path.join(self.args.train_path, 'train.ckpt'))
                     if ema is not None:
-                        th.save(ema.state_dict(), os.path.join(self.args.train_path, 'ema.pth'))
+                        th.save(ema.state_dict(), os.path.join(self.args.train_path, 'ema.ckpt'))
 
     def sample_fid(self):
         config = self.config['Sample']
