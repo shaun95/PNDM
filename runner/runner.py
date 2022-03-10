@@ -72,7 +72,7 @@ class Runner(object):
         else:
             ema = None
 
-        tb_logger = tb.SummaryWriter('temp/tensorboard')
+        tb_logger = tb.SummaryWriter(f'temp/tensorboard/{time.strftime("%m%d-%H%M")}')
         epoch, step = 0, 0
 
         if self.args.restart:
@@ -91,7 +91,7 @@ class Runner(object):
                 step += 1
                 t = th.randint(low=0, high=self.diffusion_step, size=(n // 2 + 1,))
                 t = th.cat([t, self.diffusion_step - t - 1], dim=0)[:n].to(self.device)
-                img = img.to(self.device)
+                img = img.to(self.device) * 2.0 - 1.0
 
                 img_n, noise = schedule.diffusion(img, t)
                 noise_p = model(img_n, t)
@@ -120,16 +120,18 @@ class Runner(object):
                     print(step, loss.item())
                 if step % 500 == 0:
                     config = self.config['Dataset']
+                    model.eval()
                     skip = self.diffusion_step // self.sample_speed
                     seq = range(0, self.diffusion_step, skip)
                     noise = th.randn(16, config['channels'], config['image_size'],
                                      config['image_size'], device=self.device)
                     img = self.sample_image(noise, seq, model)
-                    img = th.clamp(img, -1.0, 1.0)
+                    img = th.clamp(img * 0.5 + 0.5, 0.0, 1.0)
                     tb_logger.add_images('sample', img, global_step=step)
                     config = self.config['Train']
+                    model.train()
 
-                if step % 10000 == 0:
+                if step % 5000 == 0:
                     train_state = [model.state_dict(), optim.state_dict(), epoch, step]
                     th.save(train_state, os.path.join(self.args.train_path, 'train.ckpt'))
                     if ema is not None:
